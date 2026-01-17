@@ -1,0 +1,12 @@
+slam_toolbox:
+  ros__parameters:
+    use_sim_time: True
+    solver_plugin: solver_plugins::CeresSolver
+    ceres_linear_solver: SPARSE_NORMAL_CHOLESKY
+    ceres_preconditioner: SCHUR_JACOBI
+    ceres_trust_strategy: LEVENBERG_MARQUARDT
+    odom_frame: odom
+    map_frame: map
+    base_frame: base_link
+    scan_topic: /lidar
+    mode: mapping

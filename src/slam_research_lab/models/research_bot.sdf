@@ -1,0 +1,66 @@
+<?xml version="1.0" ?>
+<sdf version="1.8">
+<model name="research_bot">
+    <link name="base_link">
+        <inertial>
+            <mass>1.0</mass>
+            <inertia><ixx>0.1</ixx><ixy>0</ixy><ixz>0</ixz><iyy>0.1</iyy><iyz>0</iyz><izz>0.1</izz></inertia>
+        </inertial>
+        <visual name="visual">
+            <geometry><box><size>0.5 0.3 0.2</size></box></geometry>
+            <material><ambient>0.0 0.0 1.0 1</ambient><diffuse>0.0 0.0 1.0 1</diffuse></material>
+        </visual>
+        <collision name="collision"><geometry><box><size>0.5 0.3 0.2</size></box></geometry></collision>
+        <sensor name="lidar" type="gpu_lidar">
+            <pose>0 0 0.15 0 0 0</pose>
+            <topic>lidar</topic>
+            <update_rate>10</update_rate>
+            <ray>
+                <scan>
+                    <horizontal>
+                        <samples>360</samples>
+                        <resolution>1</resolution>
+                        <min_angle>-3.14</min_angle>
+                        <max_angle>3.14</max_angle>
+                    </horizontal>
+                </scan>
+                <range><min>0.1</min><max>10.0</max></range>
+            </ray>
+            <always_on>1</always_on>
+            <visualize>true</visualize>
+        </sensor>
+    </link>
+    <link name="left_wheel">
+        <pose>0.1 0.2 -0.1 -1.57 0 0</pose>
+        <visual name="visual"><geometry><cylinder><radius>0.1</radius><length>0.05</length></cylinder></geometry></visual>
+        <collision name="collision"><geometry><cylinder><radius>0.1</radius><length>0.05</length></cylinder></geometry></collision>
+    </link>
+    <link name="right_wheel">
+        <pose>0.1 -0.2 -0.1 -1.57 0 0</pose>
+        <visual name="visual"><geometry><cylinder><radius>0.1</radius><length>0.05</length></cylinder></geometry></visual>
+        <collision name="collision"><geometry><cylinder><radius>0.1</radius><length>0.05</length></cylinder></geometry></collision>
+    </link>
+    <link name="caster">
+        <pose>-0.2 0 -0.1 0 0 0</pose>
+        <visual name="visual"><geometry><sphere><radius>0.1</radius></sphere></geometry></visual>
+        <collision name="collision"><geometry><sphere><radius>0.1</radius></sphere></geometry></collision>
+    </link>
+    <joint name="left_wheel_joint" type="revolute">
+        <parent>base_link</parent><child>left_wheel</child><axis><xyz>0 0 1</xyz></axis>
+    </joint>
+    <joint name="right_wheel_joint" type="revolute">
+        <parent>base_link</parent><child>right_wheel</child><axis><xyz>0 0 1</xyz></axis>
+    </joint>
+    <plugin filename="gz-sim-diff-drive-system" name="gz::sim::systems::DiffDrive">
+        <left_joint>left_wheel_joint</left_joint>
+        <right_joint>right_wheel_joint</right_joint>
+        <wheel_separation>0.4</wheel_separation>
+        <wheel_radius>0.1</wheel_radius>
+        <topic>cmd_vel</topic>
+        <odom_topic>odometry</odom_topic>
+        <tf_topic>tf</tf_topic>
+        <frame_id>odom</frame_id>
+        <child_frame_id>base_link</child_frame_id>
+    </plugin>
+</model>
+</sdf>
