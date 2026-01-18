@@ -1,205 +1,139 @@
-# ROS 2 + Gazebo Project
+# 🏎️ ROS 2 Jazzy Digital Twin: SLAM & Simulation
 
-A lightweight Python-based ROS 2 project for running robot nodes inside Gazebo simulations. This repository provides packages, launch files, and helper scripts to run simulations and robot bringups. Some components optionally use Zenoh for efficient bridging / mesh networking — Zenoh is optional and can be disabled if it causes instability.
+![ROS 2](https://img.shields.io/badge/ROS_2-Jazzy-blue?logo=ros&logoColor=white)
+![Ubuntu](https://img.shields.io/badge/OS-Ubuntu_24.04_(WSL)-E95420?logo=ubuntu&logoColor=white)
+![Gazebo](https://img.shields.io/badge/Sim-Gazebo_Harmonic-orange)
+![Build](https://img.shields.io/badge/Build-Passing-brightgreen)
+![License](https://img.shields.io/badge/License-Apache_2.0-lightgrey)
 
-Maintainer: amugoodbad229
-
----
-
-## Table of contents
-
-- [Overview](#overview)
-- [Status](#status)
-- [Requirements](#requirements)
-- [Quickstart](#quickstart)
-- [Build](#build)
-- [Running the simulation](#running-the-simulation)
-- [Disable Zenoh (safe options)](#disable-zenoh-safe-options)
-- [Automatic fallback strategies (recommended)](#automatic-fallback-strategies-recommended)
-- [Troubleshooting](#troubleshooting)
-- [Contributing](#contributing)
-- [License](#license)
+> A complete **Digital Twin** simulation environment built for **ROS 2 Jazzy**. This project features a custom-built mobile robot equipped with Lidar, simulated in **Gazebo Harmonic**, and configured for real-time **SLAM** (Simultaneous Localization and Mapping) visualization in **RViz2**.
 
 ---
 
-## Overview
+## 🌟 Features
 
-This repository contains ROS 2 Python packages and Gazebo integration to simulate and test robot behaviors locally. It is intended for development and small-scale simulation use. Zenoh may be used by certain nodes for optimized transport bridging; however, the project is designed so Zenoh can be disabled without breaking the rest of the system.
+*   **🤖 Custom Robot Model:** A physics-compliant differential drive robot (SDF) with inertia, collision, and wheel joints.
+*   **🗺️ Real-Time SLAM:** Fully integrated `slam_toolbox` for asynchronous mapping.
+*   **🏗️ Gazebo Harmonic:** Leverages the latest Gazebo (GZ) physics engine with `ros_gz_bridge`.
+*   **📡 Sensor Fusion:** Lidar point clouds, Odometry, and TF transforms bridged seamlessly to ROS 2.
+*   **🪟 WSL 2 Optimized:** Specifically tuned to run on Windows 11 via Windows Subsystem for Linux without GUI lag.
 
-## Status
+---
 
-- Language: Python (100%)
-- Basic simulation & launch scaffolding present (see `launch/` and `src/`).
-- Zenoh integration is optional; see the "Disable Zenoh" section for safe options.
+## 🛠️ Prerequisites
 
-## Requirements
+Before running the simulation, ensure you have the following installed:
 
-- Ubuntu 24.04 
-- ROS 2 jazzy
-- Gazebo 
-- Python 3.8+
-- colcon build tool
-- (Optional) Zenoh libraries & Python bindings, only needed if you enable Zenoh features
+*   **Operating System:** Ubuntu 24.04 (Noble Numbat)
+*   **ROS Distribution:** [ROS 2 Jazzy Jalisco](https://docs.ros.org/en/jazzy/Installation.html)
+*   **Environment:** Native Ubuntu or WSL 2 (Windows 11).
 
-## Quickstart
+---
 
-1. Clone the repository:
-   ```bash
-   git clone https://github.com/amugoodbad229/ros2_gazebo_project.git
-   cd ros2_gazebo_project
-   ```
+## 🚀 Installation Guide
 
-2. Install ROS 2 and Gazebo following official instructions for your distro.
+### 1. Install Project Dependencies
+Ensure all necessary simulation and navigation packages are installed on your system.
 
-3. Optional Python deps:
-   ```bash
-   python3 -m pip install -r requirements.txt || true
-   ```
-
-4. Install package dependencies:
-   ```bash
-   sudo apt update
-   rosdep install --from-paths src --ignore-src -r -y
-   ```
-
-## Build
-
-Source your ROS 2 distribution and build:
 ```bash
-source /opt/ros/<ros-distro>/setup.bash
+sudo apt update
+sudo apt install -y ros-jazzy-desktop \
+ros-jazzy-ros-gz \
+ros-jazzy-slam-toolbox \
+ros-jazzy-navigation2 \
+ros-jazzy-nav2-bringup \
+ros-jazzy-robot-state-publisher \
+ros-jazzy-xacro
+```
+
+### 2. Clone the Repository
+Create a workspace and clone this project.
+
+```bash
+mkdir -p ~/ros2_ws/src
+cd ~/ros2_ws/src
+git clone https://github.com/amugoodbad229/ros2_gazebo_project.git .
+```
+
+### 3. Build and Source
+Compile the package using `colcon`.
+
+```bash
+cd ~/ros2_ws
 colcon build --symlink-install
 source install/setup.bash
 ```
-Replace `<ros-distro>` with your distro name (e.g., `jazzy`).
 
-## Running the simulation
-
-Typical usage examples (replace `<package>` and `<launch>` with actual names in this repo):
-
-- With Zenoh enabled (default):
-  ```bash
-  source install/setup.bash
-  ros2 launch <package> bringup.launch.py
-  ```
-
-- With Zenoh disabled (runtime parameter — if supported by the launch file):
-  ```bash
-  ros2 launch <package> bringup.launch.py use_zenoh:=false
-  ```
-
-If your repository's launch files don't yet expose a `use_zenoh` argument, see "Automatic fallback strategies" below for an implementation pattern.
-
-## Disable Zenoh (safe options)
-
-If Zenoh causes crashes, segfaults, or network instability, disable it using one of these safe approaches:
-
-1) Runtime launch argument (preferred)
-- Many launch files accept a boolean argument such as `use_zenoh` or `enable_zenoh`. Launch with:
-  ```bash
-  ros2 launch <package> bringup.launch.py use_zenoh:=false
-  ```
-
-2) Environment variable
-- Set an environment variable before launching:
-  ```bash
-  export USE_ZENOH=false
-  ros2 launch <package> bringup.launch.py
-  ```
-- Or one-liner:
-  ```bash
-  USE_ZENOH=false ros2 launch <package> bringup.launch.py
-  ```
-
-3) Edit launch/config files (persistent change)
-- Edit `launch/*.py` or YAML config files and change the Zenoh-related parameter to `false`, then rebuild.
-
-4) Remove/comment out Zenoh nodes
-- If a dedicated Zenoh bridge node exists in a launch file (e.g., `zenoh_bridge`), comment it out as a temporary workaround.
-
-## Automatic fallback strategies (recommended)
-
-Make the code resilient by adding a runtime check and fallback. Two recommended patterns:
-
-A) Launch-file argument (Python launch example)
-```python
-# launch/bringup.launch.py
-from launch import LaunchDescription
-from launch.actions import DeclareLaunchArgument
-from launch.substitutions import LaunchConfiguration
-from launch_ros.actions import Node
-from launch.conditions import IfCondition
-
-def generate_launch_description():
-    use_zenoh = LaunchConfiguration('use_zenoh', default='true')
-
-    return LaunchDescription([
-        DeclareLaunchArgument('use_zenoh', default_value='true',
-                               description='Enable Zenoh transport'),
-
-        # Example node that only launches when use_zenoh is true
-        Node(
-            package='my_package',
-            executable='zenoh_bridge_node',
-            name='zenoh_bridge',
-            condition=IfCondition(use_zenoh),
-            parameters=[{'some_param': 1}]
-        ),
-
-        # Other nodes...
-    ])
-```
-
-B) Node-level import fallback (Python runtime)
-```python
-# src/my_package/zenoh_helper.py
-import os
-import logging
-
-logger = logging.getLogger('zenoh-helper')
-USE_ZENOH = os.getenv('USE_ZENOH', 'true').lower() not in ('0', 'false', 'no')
-
-zenoh_available = False
-if USE_ZENOH:
-    try:
-        import zenoh  # or the specific zenoh Python binding this project uses
-        zenoh_available = True
-    except Exception as e:
-        logger.warning("Zenoh disabled due to import error: %s", e)
-        zenoh_available = False
-
-def start_transport():
-    if zenoh_available:
-        # init zenoh transport
-        pass
-    else:
-        # fallback to ROS2 DDS topics or local sockets
-        pass
-```
-
-These patterns avoid runtime crashes when native bindings or system libs for Zenoh are incompatible.
-
-## Troubleshooting
-
-Symptoms Zenoh is causing trouble:
-- Process crash / segfault referencing `zenoh` or `libzenoh`
-- ImportError for zenoh Python bindings
-- Network timeouts or message loss when Zenoh is enabled
-
-What to try:
-- Disable Zenoh via one of the safe options above to confirm the rest of the system works
-- Check versions of Zenoh native libs and Python bindings; reinstall to match expected version
-- Inspect logs with ROS 2 logging levels (e.g., `--ros-args --log-level DEBUG`)
-- Verify environment variables (e.g., `ROS_DOMAIN_ID`) and network config if running distributed nodes
-- If segfaults persist, run under gdb or capture a core dump and check native dependency mismatches
-
-## Contributing
-
-Contributions welcome. Suggested workflow:
-- Fork the repo, create a feature branch
-- Make changes and ensure the workspace builds
-- Open a PR with a clear description and test notes
-
-If you want, I can prepare a small PR to:
-- Add a `use_zenoh` launch argument to bringup launch files
-- Add a small `zenoh_helper` module that gracefully falls back if Zenoh isn't available
 ---
+
+## 🎮 How to Run
+
+To run the simulation, you will need **two terminal windows**.
+
+### Terminal 1: The Digital Twin
+This launches the simulation environment, the robot, the bridge, SLAM, and the visualization tools.
+
+```bash
+cd ~/ros2_ws
+source install/setup.bash
+ros2 launch slam_research_lab digital_twin.launch.py
+```
+> **What to expect:** Gazebo will open showing the robot in a research world. RViz2 will open showing the grid.
+
+### Terminal 2: Robot Control
+Open a new terminal to drive the robot using your keyboard.
+
+```bash
+source /opt/ros/jazzy/setup.bash
+ros2 run teleop_twist_keyboard teleop_twist_keyboard
+```
+
+**Controls:**
+*   `i` : Move Forward
+*   `j` : Turn Left
+*   `l` : Turn Right
+*   `k` : Stop
+
+> **✨ Magic Moment:** The map in RViz will not appear immediately. **Drive the robot forward** slightly, and SLAM will begin building the map in real-time.
+
+---
+
+## 📂 Project Structure
+
+```bash
+~/ros2_ws/src/slam_research_lab
+├── config
+│   └── slam_params.yaml       # SLAM Toolbox configuration
+├── launch
+│   └── digital_twin.launch.py # Main launch file (Sim + Bridge + Nodes)
+├── models
+│   └── research_bot.sdf       # Robot description (Lidar, Wheels, Physics)
+├── worlds
+│   └── research_world.sdf     # Simulation environment
+├── package.xml                # Dependencies
+└── setup.py                   # Python package setup
+```
+
+---
+
+## 🐛 Troubleshooting
+
+### 1. RViz Topics are Empty (WSL 2 Users)
+If you are running on WSL and do not see `/lidar` or `/map` in RViz, the Zenoh middleware might be failing to discover local topics. Revert to standard DDS for the session:
+
+```bash
+# Run this before the launch command
+unset RMW_IMPLEMENTATION
+ros2 launch slam_research_lab digital_twin.launch.py
+```
+
+### 2. "Package not found" Error
+If ROS cannot find `slam_research_lab`, it means the local workspace isn't sourced.
+
+```bash
+# Run this inside ~/ros2_ws
+source install/setup.bash
+```
+
+### 3. Map is not appearing
+The map topic `/map` is only published **after** the Lidar detects changes in the environment. Ensure you drive the robot (`i` key) for at least 1 meter to initialize the map.
